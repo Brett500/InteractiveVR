@@ -120,7 +120,7 @@ const rand = (min, max) => min + Math.random() * (max - min);
 function moveToRandom() {
 bomb.setAttribute('animation', { 
 property: 'position', to: `${rand(-4, 4)} ${rand(0.5, 3)} ${rand(-8, -6)}`, 
-dur: 2000, easing: 'easeInOutQuad' 
+dur: 1500, easing: 'easeInOutQuad' 
 }); } 
 
 // Start the next move whenever the current one finishes 
