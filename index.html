@@ -7,7 +7,7 @@
 <a-scene> 
 	<a-sky color="#ECECEC"></a-sky>
 	<a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
-<a-sphere id="bomb" position="1 1 -5" color="rgb(0, 0, 0)"
+<a-sphere id="bomb" position="3 1 -5" color="rgb(0, 0, 0)"
 animation="
 property: position;
 dir: alternate;
@@ -130,7 +130,7 @@ const rand = (min, max) => min + Math.random() * (max - min);
 
 function moveToRandom() {
 bomb.setAttribute('animation', { 
-property: 'position', to: `${rand(-4, 4)} ${rand(0.5, 3)} ${rand(-8, -2)}`, 
+property: 'position', to: `${rand(-4, 4)} ${rand(0.5, 3)} ${rand(-8, -6)}`, 
 dur: 2000, easing: 'easeInOutQuad' 
 }); } 
 
