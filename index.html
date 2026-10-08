@@ -1,143 +1,71 @@
-<!DOCTYPE html> 
-<html> 
-<head> 
-<script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script> 
-</head> 
-<body> 
-<a-scene> 
-	<a-sky color="#ECECEC"></a-sky>
-	<a-plane rotation="-90 0 0" width="20" height="20" color="#7BC8A4"></a-plane>
-<a-sphere id="bomb" position="3 1 -5" color="rgb(0, 0, 0)"
-animation="
-property: position;
-dir: alternate;
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="https://aframe.io/releases/1.8.0/aframe.min.js"></script>
+   
+    </head>
+    <body>
+        <a-scene>
+            <a-assets>
+                <audio id="Thump" src="Thump.mp3" preload="auto"></audio>
+                <audio id="Background" src="VideoGameMusic.mp3" preload="auto"></audio>
+            </a-assets>
+              <a-text
+        value="Score:"
+        position="-2 4 -3"
+        color="black"
+        width="6"
+        font="kelsonsans">
+      </a-text>
+        <a-entity
+        id="music" sound= "src: #Background; loop: true; volume: 0.8;"    
+        ></a-entity>
+       
 
-"
-
-
-animation__2="
-property: scale;
- from: 1 1 1;
- to: 10 10 10;
- dur: 500;
- startEvents: click;
-"
-animation__3="
-property: color;
-from: rgb(0, 0 , 0);
-to: rgb(255, 0 , 0);
-startEvents: click;
-dur: 200;
-"
-
-    ></a-sphere>
-    <a-sphere
-     position="2 3 -5" color="green" 
-     animation="property: position; 
-     from: 2 3 -5; to: -2 3 -5; loop: true; dur: 1000; dir: alternate;"
-     
-     animation__2="
-                property: scale;
-                from: 1 1 1;
-                to: 0 0 0;
-                dur: 100;
-                startEvents: click;
-            "
-    ></a-sphere>
-     <a-sphere
-     position="-4 5 -5" color="green" id="coin"
-      animation="property: position; 
-     from: -4 5 -5; to: -4 0 -5; loop: true; dur: 1300; dir: alternate;"
-     animation__2="
-                property: scale;
-                from: 1 1 1;
-                to: 0 0 0;
-                dur: 100;
-                startEvents: click;
-            "
-    ></a-sphere>
-     <a-sphere
-     position="3 4 4" color="green" id="coin"
-      animation="property: position; 
-     from: 3 4 4; to: 3 4 1; loop: true; dur: 1000; dir: alternate;"
-     animation__2="
-                property: scale;
-                from: 1 1 1;
-                to: 0 0 0;
-                dur: 100;
-                startEvents: click;
-            "
-    ></a-sphere>
-     <a-sphere
-     position="4 2 6" color="green" id="coin"
-  animation="property: position; 
-     from: 4 2 6; to: 4 6 6; loop: true; dur: 700; dir: alternate;"
-     animation__2="
-                property: scale;
-                from: 1 1 1;
-                to: 0 0 0;
-                dur: 100;
-                startEvents: click;
-            "
-    ></a-sphere>
-     <a-sphere
-     position="-3 2 6" color="green" id="coin"
-     animation="property: position; 
-     from: -3 2 6; to: -3 2 10; loop: true; dur: 1500; dir: alternate;"
-     animation__2="
-                property: scale;
-                from: 1 1 1;
-                to: 0 0 0;
-                dur: 100;
-                startEvents: click;
-            "
-    ></a-sphere>
-     <a-sphere
-     position="1 5 -3" color="green" id="coin"
-      animation="property: position; 
-     from: 1 5 -3; to: 1 5 3; loop: true; dur: 1800; dir: alternate;"
-     animation__2="
-                property: scale;
-                from: 1 1 1;
-                to: 0 0 0;
-                dur: 100;
-                startEvents: click;
-            "
-    ></a-sphere>
-    
-<a-camera>
-                <a-cursor fuse="true" fuse-timeout="500"></a-cursor>
+   
+       <a-text
+        value="0"
+        position="-1 4 -3"
+        color="black"
+        width="6"
+        font="kelsonsans">
+      </a-text>
+ <a-sky color="lightblue"></a-sky>  
+ <a-camera>
+                <a-cursor></a-cursor>
             </a-camera>
+            <a-cylinder
+             position="0 1 -4" width="1" height="2" sound="src: #Thump; on: click; volume 1" rotation="0 180 0" color="red"
+         animation="
+         property: position;
+            from: 0 1 -4;
+            to: 0 -2.5 -4;
+            loop: true;
+            dir: alternate;
+            dur: 1100;
+            "
+         animation__2="
+                property: scale;
+                from: 1 1 1;
+                to: 0 0 0;
+                dur: 100;
+                 startEvents:click;
+            "
+            ></a-cylinder>
+           
+    </a-scene>
+          <script>document.addEventListener('DOMContentLoaded', () => {
+      const scene = document.querySelector('a-scene');
+      const music = document.querySelector('#music');
 
+      const startMusic = () => {
+      music.components.sound.playSound();
+    };
 
-
-</a-scene> 
-<script> 
-const scene = document.querySelector('a-scene'); 
-const bomb = document.querySelector('#bomb'); 
-const rand = (min, max) => min + Math.random() * (max - min); 
-
-function moveToRandom() {
-bomb.setAttribute('animation', { 
-property: 'position', to: `${rand(-4, 4)} ${rand(0.5, 3)} ${rand(-8, -6)}`, 
-dur: 1500, easing: 'easeInOutQuad' 
-}); } 
-
-// Start the next move whenever the current one finishes 
-bomb.addEventListener('animationcomplete', moveToRandom); 
-
-// Start the first move once the scene is ready 
-if (scene.hasLoaded) 
-{ 
-moveToRandom(); 
-} 
-else 
-{ 
-scene.addEventListener('loaded', moveToRandom); 
-} 
-</script> 
-
-
-
-	</body> 
+    // Fires once on the first user interaction
+    scene.addEventListener('mousemove', startMusic, { once: true });
+    window.addEventListener('touchstart', startMusic, { once: true });
+  });
+</script>
+    </body>
 </html>
