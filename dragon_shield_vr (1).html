@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dragon Shield VR - Epic Boss Battle</title>
+  <!-- A-Frame Library -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <!-- Tailwind CSS for UI Overlay -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Rajdhani:wght@600;700&display=swap');
+    
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+      background-color: #000;
+    }
+    
+    .fantasy-title {
+      font-family: 'Cinzel', serif;
+    }
+    
+    #damage-flash {
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+    }
+
+    .glow-gold {
+      text-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+    .glow-red {
+      text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 20px rgba(239, 68, 68, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-black text-white">
+
+  <!-- HUD & UI Overlay (2D Screen) -->
+  <div id="ui-container" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+    
+    <!-- Top Bar: Health and Scores -->
+    <div class="flex justify-between items-start w-full max-w-5xl mx-auto gap-4">
+      <!-- Player Status -->
+      <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-3 md:p-4 rounded-xl w-1/3 max-w-xs shadow-2xl">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-xs md:text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1">
+            🛡️ Player Health
+          </span>
+          <span id="player-hp-text" class="text-xs md:text-sm font-bold text-white">100 / 100</span>
+        </div>
+        <div class="w-full bg-slate-800 h-3 md:h-4 rounded-full overflow-hidden p-0.5 border border-slate-600">
+          <div id="player-hp-bar" class="bg-gradient-to-r from-blue-600 to-cyan-400 h-full rounded-full transition-all duration-200" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Score display -->
+      <div class="text-center bg-slate-900/90 backdrop-blur-md border border-amber-500/50 px-4 md:px-6 py-2 rounded-xl shadow-2xl">
+        <div class="text-xs font-semibold uppercase tracking-widest text-amber-400">Score</div>
+        <div id="score-text" class="text-2xl md:text-4xl font-extrabold text-amber-300 fantasy-title glow-gold">0</div>
+      </div>
+
+      <!-- Dragon Boss Status -->
+      <div class="bg-slate-900/90 backdrop-blur-md border border-slate-700/80 p-3 md:p-4 rounded-xl w-1/3 max-w-xs shadow-2xl">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-xs md:text-sm font-bold uppercase tracking-wider text-red-500 flex items-center gap-1">
+            🐉 Ignis The Ancient
+          </span>
+          <span id="dragon-hp-text" class="text-xs md:text-sm font-bold text-white">500 / 500</span>
+        </div>
+        <div class="w-full bg-slate-800 h-3 md:h-4 rounded-full overflow-hidden p-0.5 border border-slate-600">
+          <div id="dragon-hp-bar" class="bg-gradient-to-r from-red-700 via-orange-500 to-amber-400 h-full rounded-full transition-all duration-200" style="width: 100%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- On-screen Controls Tip -->
+    <div class="text-center text-xs md:text-sm text-slate-200 bg-slate-900/80 backdrop-blur-md self-center px-5 py-2 rounded-full border border-amber-500/30 shadow-lg">
+      <span class="text-amber-400 font-bold">How to Play:</span> Aim your <span class="text-cyan-300 font-bold">Shield</span> at incoming fireballs to block/deflect them! Left-Click / Spacebar / Trigger fires counter arcane bolts.
+    </div>
+  </div>
+
+  <!-- Red Flash Effect on Damage -->
+  <div id="damage-flash" class="absolute inset-0 bg-red-600/40 z-20 opacity-0 pointer-events-none"></div>
+
+  <!-- Start Screen Overlay -->
+  <div id="start-overlay" class="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-lg flex flex-col items-center justify-center p-6 text-center pointer-events-auto">
+    <div class="max-w-xl w-full border border-amber-500/40 bg-slate-900/95 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+      <div class="w-16 h-16 mb-4 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 text-3xl">
+        🛡️
+      </div>
+      <h1 class="fantasy-title text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 mb-2 glow-gold">
+        DRAGON SHIELD VR
+      </h1>
+      <p class="text-slate-300 text-sm md:text-base mb-6 max-w-md">
+        Defend yourself against the ancient fire dragon! Block fireballs with your shield to deflect them back or blast the beast with arcane energy!
+      </p>
+
+      <div class="grid grid-cols-2 gap-4 w-full mb-6 text-left text-xs md:text-sm bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+        <div class="flex items-start space-x-2">
+          <span class="text-amber-400 font-bold text-base">🛡️</span>
+          <span class="text-slate-300"><strong class="text-amber-300">Defend:</strong> Point your shield directly at incoming fireballs.</span>
+        </div>
+        <div class="flex items-start space-x-2">
+          <span class="text-cyan-400 font-bold text-base">⚡</span>
+          <span class="text-slate-300"><strong class="text-cyan-300">Attack:</strong> Click/Tap or use VR Trigger to shoot Arcane Bolts.</span>
+        </div>
+      </div>
+
+      <button id="start-btn" class="pointer-events-auto w-full py-4 px-8 bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white font-extrabold text-lg rounded-xl shadow-lg shadow-orange-900/50 hover:scale-105 transition-all transform cursor-pointer fantasy-title">
+        ENTER ARENA
+      </button>
+      <p class="text-xs text-slate-400 mt-3">Supports Desktop Mouse/Touch & VR Controllers (Oculus/Vive/Index)</p>
+    </div>
+  </div>
+
+  <!-- Victory / Game Over Overlay -->
+  <div id="end-overlay" class="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden pointer-events-auto">
+    <div id="end-card" class="max-w-lg w-full border border-slate-800 bg-slate-900/95 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+      <h2 id="end-title" class="fantasy-title text-4xl font-black mb-2">VICTORY!</h2>
+      <p id="end-subtitle" class="text-slate-300 mb-6">You slayed Ignis and defended the realm!</p>
+      
+      <div class="bg-slate-950/80 p-4 rounded-xl w-full mb-6 border border-slate-800 flex justify-around">
+        <div>
+          <div class="text-xs text-slate-400 uppercase">Final Score</div>
+          <div id="end-score" class="text-3xl font-bold text-amber-400 fantasy-title">0</div>
+        </div>
+      </div>
+
+      <button id="restart-btn" class="w-full py-3 px-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold rounded-xl shadow-lg transition-all cursor-pointer fantasy-title">
+        PLAY AGAIN
+      </button>
+    </div>
+  </div>
+
+  <!-- A-FRAME 3D SCENE -->
+  <a-scene embedded class="w-full h-full" vr-mode-ui="enabled: true">
+
+    <!-- Atmospheric Sky Dome -->
+    <a-sky color="#1a0505"></a-sky>
+
+    <!-- Lighting Setup (Bright lava glow + directional moonlight) -->
+    <a-ambient-light color="#ff7744" intensity="0.7"></a-ambient-light>
+    <a-light type="directional" color="#ffddaa" intensity="1.2" position="-5 15 5"></a-light>
+    <a-light id="dragon-fire-light" type="point" color="#ff3300" intensity="2" distance="30" position="0 6 -12"></a-light>
+
+    <!-- Environment: Lava Lake and Arena Platform -->
+    <!-- Lava Sea Surface -->
+    <a-plane position="0 -1.5 0" rotation="-90 0 0" width="120" height="120" color="#ff2200" material="emissive: #991100; emissiveIntensity: 0.8; roughness: 0.9"></a-plane>
+
+    <!-- Central Rocky Arena Floor -->
+    <a-cylinder id="arena-floor" position="0 -0.1 0" radius="16" height="0.6" color="#2d3748" material="roughness: 0.8"></a-cylinder>
+
+    <!-- Volcanic Pillars surrounding arena -->
+    <a-entity id="pillars">
+      <a-cylinder position="-10 4 -8" radius="1.2" height="10" color="#1a202c" material="roughness: 0.9"></a-cylinder>
+      <a-cylinder position="10 4 -8" radius="1.2" height="10" color="#1a202c" material="roughness: 0.9"></a-cylinder>
+      <a-cylinder position="-12 4 4" radius="1.2" height="10" color="#1a202c" material="roughness: 0.9"></a-cylinder>
+      <a-cylinder position="12 4 4" radius="1.2" height="10" color="#1a202c" material="roughness: 0.9"></a-cylinder>
+
+      <!-- Glowing Fire Orbs on Pillars -->
+      <a-sphere position="-10 9 -8" radius="0.5" color="#ff6600" material="emissive: #ff3300; emissiveIntensity: 3; shader: flat"></a-sphere>
+      <a-sphere position="10 9 -8" radius="0.5" color="#ff6600" material="emissive: #ff3300; emissiveIntensity: 3; shader: flat"></a-sphere>
+    </a-entity>
+
+    <!-- Atmospheric Floating Embers Container -->
+    <a-entity id="embers-container"></a-entity>
+
+    <!-- 3D DRAGON ENTITY (Composed of Primitive Geometries) -->
+    <a-entity id="dragon-boss" position="0 4.5 -14">
+      
+      <!-- Dragon Health Bar (In 3D VR Space) -->
+      <a-entity position="0 4.5 0" id="dragon-3d-hp">
+        <a-plane width="4.2" height="0.5" color="#000000" material="opacity: 0.7"></a-plane>
+        <a-plane id="dragon-3d-hp-bar" width="4.0" height="0.35" position="0 0 0.01" color="#ef4444" material="emissive: #dc2626; emissiveIntensity: 0.5"></a-plane>
+        <a-text value="IGNIS THE ANCIENT" align="center" position="0 0.5 0" width="6" color="#fca5a5"></a-text>
+      </a-entity>
+
+      <!-- Dragon Root Container for Animations -->
+      <a-entity id="dragon-animator">
+        
+        <!-- Main Torso / Body -->
+        <a-cone id="dragon-body" position="0 0 0" radius-top="1.1" radius-bottom="2.0" height="4.0" rotation="45 0 0" color="#7f1d1d" material="roughness: 0.5">
+          <!-- Chest glowing fiery core -->
+          <a-sphere position="0 0.2 -0.8" radius="0.85" color="#f97316" material="emissive: #ea580c; emissiveIntensity: 1.5; shader: flat"></a-sphere>
+        </a-cone>
+
+        <!-- Dragon Neck & Head Group -->
+        <a-entity id="dragon-neck-group" position="0 1.2 -1.0">
+          <!-- Neck -->
+          <a-cylinder position="0 0.8 -0.4" radius="0.65" height="1.6" rotation="20 0 0" color="#991b1b"></a-cylinder>
+          
+          <!-- Head Base -->
+          <a-entity id="dragon-head" position="0 1.6 -0.8" rotation="10 0 0">
+            <!-- Snout -->
+            <a-box position="0 0 -0.8" width="1.1" height="0.75" depth="1.6" color="#7f1d1d"></a-box>
+            <!-- Jaw -->
+            <a-box id="dragon-jaw" position="0 -0.35 -0.8" width="0.9" height="0.3" depth="1.5" color="#450a0a"></a-box>
+            
+            <!-- Eyes -->
+            <a-sphere position="-0.45 0.25 -0.6" radius="0.16" color="#facc15" material="emissive: #eab308; emissiveIntensity: 3; shader: flat"></a-sphere>
+            <a-sphere position="0.45 0.25 -0.6" radius="0.16" color="#facc15" material="emissive: #eab308; emissiveIntensity: 3; shader: flat"></a-sphere>
+            
+            <!-- Horns -->
+            <a-cone position="-0.4 0.7 0.1" radius-bottom="0.18" height="1.3" rotation="-30 -15 0" color="#1e293b"></a-cone>
+            <a-cone position="0.4 0.7 0.1" radius-bottom="0.18" height="1.3" rotation="-30 15 0" color="#1e293b"></a-cone>
+            
+            <!-- Mouth Fireball Glow (Active during attack telegraph) -->
+            <a-sphere id="mouth-glow" position="0 -0.1 -1.5" radius="0.5" color="#ff4500" material="emissive: #ff2200; emissiveIntensity: 0; shader: flat" visible="false"></a-sphere>
+          </a-entity>
+        </a-entity>
+
+        <!-- Wings -->
+        <!-- Left Wing -->
+        <a-entity id="wing-left-anchor" position="-1.5 1 0.5" rotation="0 0 15">
+          <a-box position="-2 0 -0.2" width="3.6" height="0.1" depth="1.8" color="#581c87" rotation="0 -20 -10"></a-box>
+          <a-triangle position="-3.2 0 -1.2" vertex-a="0 0 0" vertex-b="-1.8 0 1.5" vertex-c="1 0 1.5" color="#450a0a" material="side: double"></a-triangle>
+        </a-entity>
+        
+        <!-- Right Wing -->
+        <a-entity id="wing-right-anchor" position="1.5 1 0.5" rotation="0 0 -15">
+          <a-box position="2 0 -0.2" width="3.6" height="0.1" depth="1.8" color="#581c87" rotation="0 20 10"></a-box>
+          <a-triangle position="3.2 0 -1.2" vertex-a="0 0 0" vertex-b="1.8 0 1.5" vertex-c="-1 0 1.5" color="#450a0a" material="side: double"></a-triangle>
+        </a-entity>
+
+        <!-- Tail -->
+        <a-entity position="0 -1.5 1.5" rotation="-30 0 0">
+          <a-cylinder position="0 -1 0.5" radius="0.5" height="2.5" color="#7f1d1d"></a-cylinder>
+          <a-cone position="0 -2.3 1.2" radius-bottom="0.4" height="1.5" rotation="-20 0 0" color="#1e293b"></a-cone>
+        </a-entity>
+
+      </a-entity>
+    </a-entity>
+
+    <!-- PROJECTILES CONTAINERS -->
+    <a-entity id="fireballs-container"></a-entity>
+    <a-entity id="player-bolts-container"></a-entity>
+
+    <!-- PLAYER RIG / CAMERA / VR CONTROLLERS -->
+    <a-entity id="player-rig" position="0 0 0">
+      
+      <!-- Camera & Desktop Shield -->
+      <a-entity id="camera" camera look-controls position="0 1.6 0">
+        
+        <!-- Non-VR Shield (Positioned right in front of camera view) -->
+        <a-entity id="desktop-shield-holder" position="0 -0.15 -0.65" rotation="0 0 0">
+          <!-- Shield Outer Rim -->
+          <a-cylinder id="desktop-shield" class="shield-target" radius="0.45" height="0.06" rotation="90 0 0" color="#1e293b" material="metalness: 0.8; roughness: 0.2">
+            <!-- Glowing Azure Crest -->
+            <a-ring radius-inner="0.18" radius-outer="0.38" color="#38bdf8" material="emissive: #0284c7; emissiveIntensity: 2; shader: flat" position="0 0.04 0"></a-ring>
+            <!-- Gold Boss Center -->
+            <a-octahedron radius="0.16" color="#f59e0b" material="emissive: #d97706; emissiveIntensity: 2; shader: flat" position="0 0.05 0"></a-octahedron>
+          </a-cylinder>
+        </a-entity>
+
+        <!-- VR HUD Text -->
+        <a-entity position="0 0.4 -1.0" id="vr-hud" visible="false">
+          <a-text id="vr-hud-text" value="HP: 100 | BOSS: 500" align="center" width="2" color="#fde047"></a-text>
+        </a-entity>
+
+      </a-entity>
+
+      <!-- Left VR Controller (Shield attached in VR mode) -->
+      <a-entity id="left-hand" oculus-touch-controls="hand: left" vive-controls="hand: left" windows-motion-controls="hand: left">
+        <a-entity id="vr-shield" class="shield-target" position="0 0 -0.1" rotation="90 0 0">
+          <a-cylinder radius="0.5" height="0.07" color="#1e293b" material="metalness: 0.8; roughness: 0.2">
+            <a-ring radius-inner="0.2" radius-outer="0.42" color="#38bdf8" material="emissive: #0284c7; emissiveIntensity: 2; shader: flat" position="0 0.04 0"></a-ring>
+            <a-octahedron radius="0.18" color="#f59e0b" material="emissive: #d97706; emissiveIntensity: 2; shader: flat" position="0 0.05 0"></a-octahedron>
+          </a-cylinder>
+        </a-entity>
+      </a-entity>
+
+      <!-- Right VR Controller (Magic Blaster Wand) -->
+      <a-entity id="right-hand" oculus-touch-controls="hand: right" vive-controls="hand: right" windows-motion-controls="hand: right">
+        <a-cylinder radius="0.025" height="0.35" color="#475569" rotation="45 0 0" position="0 0 -0.1">
+          <a-sphere radius="0.05" color="#38bdf8" material="emissive: #0284c7; emissiveIntensity: 2; shader: flat" position="0 0.18 0"></a-sphere>
+        </a-cylinder>
+      </a-entity>
+
+    </a-entity>
+
+  </a-scene>
+
+  <!-- GAME LOGIC SCRIPT -->
+  <script>
+    // ==========================================
+    // PROCEDURAL WEB AUDIO SYNTHESIZER
+    // ==========================================
+    class SoundFX {
+      constructor() { this.ctx = null; }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playFireball() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(260, now);
+        osc.frequency.exponentialRampToValueAtTime(50, now + 0.5);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      }
+
+      playDeflect() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.exponentialRampToValueAtTime(1800, now + 0.1);
+        osc.frequency.exponentialRampToValueAtTime(400, now + 0.35);
+        gain.gain.setValueAtTime(0.7, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playHurt() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const bufferSize = this.ctx.sampleRate * 0.35;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(700, now);
+        filter.frequency.linearRampToValueAtTime(80, now + 0.35);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+      }
+
+      playMagicBolt() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(550, now);
+        osc.frequency.exponentialRampToValueAtTime(1300, now + 0.18);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.18);
+      }
+
+      playRoar() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, now);
+        osc.frequency.linearRampToValueAtTime(160, now + 0.3);
+        osc.frequency.linearRampToValueAtTime(50, now + 1.1);
+        gain.gain.setValueAtTime(0.8, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 1.1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 1.1);
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // ==========================================
+    // GAME STATE & CONFIG
+    // ==========================================
+    const STATE = {
+      active: false,
+      playerHp: 100,
+      maxPlayerHp: 100,
+      dragonHp: 500,
+      maxDragonHp: 500,
+      score: 0,
+      lastAttackTime: 0,
+      attackInterval: 3000,
+      isDragonTelegraphing: false,
+      isVR: false
+    };
+
+    // DOM Elements
+    const elStartOverlay = document.getElementById('start-overlay');
+    const elEndOverlay = document.getElementById('end-overlay');
+    const elStartBtn = document.getElementById('start-btn');
+    const elRestartBtn = document.getElementById('restart-btn');
+    const elPlayerHpBar = document.getElementById('player-hp-bar');
+    const elPlayerHpText = document.getElementById('player-hp-text');
+    const elDragonHpBar = document.getElementById('dragon-hp-bar');
+    const elDragonHpText = document.getElementById('dragon-hp-text');
+    const elDragon3dHpBar = document.getElementById('dragon-3d-hp-bar');
+    const elScoreText = document.getElementById('score-text');
+    const elDamageFlash = document.getElementById('damage-flash');
+    const elVrHud = document.getElementById('vr-hud');
+    const elVrHudText = document.getElementById('vr-hud-text');
+
+    // Scene References
+    const sceneEl = document.querySelector('a-scene');
+    const dragonEl = document.getElementById('dragon-boss');
+    const dragonAnimator = document.getElementById('dragon-animator');
+    const dragonWingLeft = document.getElementById('wing-left-anchor');
+    const dragonWingRight = document.getElementById('wing-right-anchor');
+    const mouthGlowEl = document.getElementById('mouth-glow');
+    const fireballsContainer = document.getElementById('fireballs-container');
+    const playerBoltsContainer = document.getElementById('player-bolts-container');
+    const cameraEl = document.getElementById('camera');
+    const desktopShieldEl = document.getElementById('desktop-shield');
+    const vrShieldEl = document.getElementById('vr-shield');
+
+    let activeFireballs = [];
+    let activeBolts = [];
+
+    // ==========================================
+    // INITIALIZATION & EVENT LISTENERS
+    // ==========================================
+    window.addEventListener('load', () => {
+      createEmbers();
+
+      sceneEl.addEventListener('enter-vr', () => {
+        STATE.isVR = true;
+        elVrHud.setAttribute('visible', 'true');
+        document.getElementById('desktop-shield-holder').setAttribute('visible', 'false');
+      });
+
+      sceneEl.addEventListener('exit-vr', () => {
+        STATE.isVR = false;
+        elVrHud.setAttribute('visible', 'false');
+        document.getElementById('desktop-shield-holder').setAttribute('visible', 'true');
+      });
+
+      elStartBtn.addEventListener('click', startGame);
+      elRestartBtn.addEventListener('click', restartGame);
+
+      // Attack Trigger Events
+      window.addEventListener('click', (evt) => {
+        if (!STATE.active || evt.target.closest('#start-overlay') || evt.target.closest('#end-overlay')) return;
+        spawnPlayerBolt();
+      });
+
+      window.addEventListener('keydown', (evt) => {
+        if (evt.code === 'Space' && STATE.active) spawnPlayerBolt();
+      });
+
+      const rightHand = document.getElementById('right-hand');
+      rightHand.addEventListener('triggerdown', () => {
+        if (STATE.active) spawnPlayerBolt(true);
+      });
+
+      sceneEl.addEventListener('renderloop', gameLoop);
+    });
+
+    function startGame() {
+      sfx.init();
+      STATE.active = true;
+      STATE.playerHp = STATE.maxPlayerHp;
+      STATE.dragonHp = STATE.maxDragonHp;
+      STATE.score = 0;
+      STATE.lastAttackTime = performance.now();
+      
+      updateUI();
+      elStartOverlay.classList.add('hidden');
+      elEndOverlay.classList.add('hidden');
+
+      sfx.playRoar();
+    }
+
+    function restartGame() {
+      fireballsContainer.innerHTML = '';
+      playerBoltsContainer.innerHTML = '';
+      activeFireballs = [];
+      activeBolts = [];
+      
+      dragonEl.setAttribute('position', '0 4.5 -14');
+      dragonEl.setAttribute('rotation', '0 0 0');
+
+      startGame();
+    }
+
+    // ==========================================
+    // ATMOSPHERIC EMBERS GENERATION
+    // ==========================================
+    function createEmbers() {
+      const container = document.getElementById('embers-container');
+      for (let i = 0; i < 35; i++) {
+        const ember = document.createElement('a-sphere');
+        const x = (Math.random() - 0.5) * 30;
+        const y = Math.random() * 12 + 0.5;
+        const z = (Math.random() - 0.5) * 30 - 8;
+        const scale = Math.random() * 0.08 + 0.03;
+
+        ember.setAttribute('position', `${x} ${y} ${z}`);
+        ember.setAttribute('radius', scale);
+        ember.setAttribute('color', '#ff5500');
+        ember.setAttribute('material', 'emissive: #ff3300; emissiveIntensity: 2.5; shader: flat');
+        container.appendChild(ember);
+      }
+    }
+
+    // ==========================================
+    // DRAGON ATTACK AI & PROJECTILE LAUNCH
+    // ==========================================
+    function triggerDragonAttack(currentTime) {
+      STATE.isDragonTelegraphing = true;
+      mouthGlowEl.setAttribute('visible', 'true');
+      mouthGlowEl.setAttribute('material', 'emissiveIntensity', 3.5);
+
+      sfx.playRoar();
+
+      // Dragon Charge Up Telegraph
+      dragonEl.setAttribute('animation__charge', {
+        property: 'position',
+        to: '0 5.2 -13',
+        dur: 600,
+        easing: 'easeOutQuad'
+      });
+
+      setTimeout(() => {
+        if (!STATE.active) return;
+        
+        spawnFireball();
+
+        mouthGlowEl.setAttribute('visible', 'false');
+        dragonEl.setAttribute('animation__reset', {
+          property: 'position',
+          to: '0 4.5 -14',
+          dur: 500,
+          easing: 'easeInQuad'
+        });
+
+        STATE.isDragonTelegraphing = false;
+        STATE.lastAttackTime = currentTime;
+      }, 700);
+    }
+
+    function spawnFireball() {
+      sfx.playFireball();
+
+      const fireball = document.createElement('a-entity');
+      
+      const sphere = document.createElement('a-sphere');
+      sphere.setAttribute('radius', '0.45');
+      sphere.setAttribute('color', '#ff2200');
+      sphere.setAttribute('material', 'emissive: #ff5500; emissiveIntensity: 3; shader: flat');
+
+      const core = document.createElement('a-sphere');
+      core.setAttribute('radius', '0.25');
+      core.setAttribute('color', '#ffeb3b');
+      core.setAttribute('material', 'emissive: #ffffff; emissiveIntensity: 4; shader: flat');
+      sphere.appendChild(core);
+
+      fireball.appendChild(sphere);
+
+      const startPos = new THREE.Vector3(0, 4.2, -12.5);
+      fireball.setAttribute('position', startPos);
+
+      const camPos = cameraEl.object3D.getWorldPosition(new THREE.Vector3());
+      const dir = new THREE.Vector3().subVectors(camPos, startPos).normalize();
+      
+      const speed = 11 + Math.min(STATE.score * 0.01, 8);
+
+      fireballsContainer.appendChild(fireball);
+
+      activeFireballs.push({
+        element: fireball,
+        position: startPos.clone(),
+        velocity: dir.multiplyScalar(speed),
+        isReflected: false
+      });
+    }
+
+    // ==========================================
+    // PLAYER ARCANE BOLT LAUNCH
+    // ==========================================
+    function spawnPlayerBolt(fromVRHand = false) {
+      sfx.playMagicBolt();
+
+      const bolt = document.createElement('a-sphere');
+      bolt.setAttribute('radius', '0.22');
+      bolt.setAttribute('color', '#38bdf8');
+      bolt.setAttribute('material', 'emissive: #0284c7; emissiveIntensity: 3; shader: flat');
+
+      let startPos = new THREE.Vector3();
+      let dir = new THREE.Vector3();
+
+      if (fromVRHand) {
+        const rightHand = document.getElementById('right-hand');
+        rightHand.object3D.getWorldPosition(startPos);
+        rightHand.object3D.getWorldDirection(dir);
+        dir.negate();
+      } else {
+        cameraEl.object3D.getWorldPosition(startPos);
+        cameraEl.object3D.getWorldDirection(dir);
+        dir.negate();
+      }
+
+      bolt.setAttribute('position', startPos);
+      playerBoltsContainer.appendChild(bolt);
+
+      activeBolts.push({
+        element: bolt,
+        position: startPos.clone(),
+        velocity: dir.multiplyScalar(22)
+      });
+    }
+
+    // ==========================================
+    // MAIN LOOP & SHIELD COLLISION CHECKS
+    // ==========================================
+    let lastTime = performance.now();
+
+    function gameLoop() {
+      const now = performance.now();
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
+
+      if (!STATE.active) return;
+
+      // 1. Dragon Idle Flapping Animation
+      dragonAnimator.setAttribute('position', `0 ${Math.sin(now * 0.003) * 0.35} 0`);
+      const wingRot = Math.sin(now * 0.006) * 22;
+      dragonWingLeft.setAttribute('rotation', `0 0 ${15 + wingRot}`);
+      dragonWingRight.setAttribute('rotation', `0 0 ${-15 - wingRot}`);
+
+      // 2. Dragon AI Attack Check
+      if (!STATE.isDragonTelegraphing && now - STATE.lastAttackTime > STATE.attackInterval) {
+        triggerDragonAttack(now);
+      }
+
+      // 3. Update Fireballs
+      updateFireballs(delta);
+
+      // 4. Update Player Bolts
+      updatePlayerBolts(delta);
+    }
+
+    function updateFireballs(delta) {
+      const playerCamPos = cameraEl.object3D.getWorldPosition(new THREE.Vector3());
+      const activeShieldMesh = STATE.isVR ? vrShieldEl : desktopShieldEl;
+      const shieldPos = activeShieldMesh.object3D.getWorldPosition(new THREE.Vector3());
+
+      for (let i = activeFireballs.length - 1; i >= 0; i--) {
+        const fb = activeFireballs[i];
+        
+        fb.position.addScaledVector(fb.velocity, delta);
+        fb.element.setAttribute('position', fb.position);
+
+        // A. Shield Deflection Check
+        const distToShield = fb.position.distanceTo(shieldPos);
+        if (!fb.isReflected && distToShield < 1.1) {
+          fb.isReflected = true;
+          sfx.playDeflect();
+
+          const dragonPos = dragonEl.object3D.getWorldPosition(new THREE.Vector3());
+          const reflectDir = new THREE.Vector3().subVectors(dragonPos, fb.position).normalize();
+          fb.velocity = reflectDir.multiplyScalar(26);
+
+          const sphere = fb.element.querySelector('a-sphere');
+          if (sphere) {
+            sphere.setAttribute('color', '#00f0ff');
+            sphere.setAttribute('material', 'emissive: #0088ff; emissiveIntensity: 3.5; shader: flat');
+          }
+
+          STATE.score += 150;
+          updateUI();
+          createImpactParticles(fb.position, '#38bdf8');
+          continue;
+        }
+
+        // B. Player Damage Check
+        if (!fb.isReflected && fb.position.distanceTo(playerCamPos) < 0.95) {
+          takePlayerDamage(20);
+          createImpactParticles(fb.position, '#ff3300');
+          removeFireball(i);
+          continue;
+        }
+
+        // C. Reflected Fireball Hits Dragon Boss
+        if (fb.isReflected) {
+          const dragonPos = dragonEl.object3D.getWorldPosition(new THREE.Vector3());
+          if (fb.position.distanceTo(dragonPos) < 2.8) {
+            damageDragon(75);
+            STATE.score += 300;
+            updateUI();
+            createImpactParticles(fb.position, '#00ffff');
+            removeFireball(i);
+            continue;
+          }
+        }
+
+        // D. Out of bounds Cleanup
+        if (fb.position.length() > 55 || fb.position.y < -3) {
+          removeFireball(i);
+        }
+      }
+    }
+
+    function updatePlayerBolts(delta) {
+      const dragonPos = dragonEl.object3D.getWorldPosition(new THREE.Vector3());
+
+      for (let i = activeBolts.length - 1; i >= 0; i--) {
+        const bolt = activeBolts[i];
+        
+        bolt.position.addScaledVector(bolt.velocity, delta);
+        bolt.element.setAttribute('position', bolt.position);
+
+        if (bolt.position.distanceTo(dragonPos) < 2.6) {
+          damageDragon(20);
+          STATE.score += 50;
+          updateUI();
+          createImpactParticles(bolt.position, '#38bdf8');
+          removeBolt(i);
+          continue;
+        }
+
+        if (bolt.position.length() > 50) {
+          removeBolt(i);
+        }
+      }
+    }
+
+    function removeFireball(index) {
+      if (activeFireballs[index]) {
+        fireballsContainer.removeChild(activeFireballs[index].element);
+        activeFireballs.splice(index, 1);
+      }
+    }
+
+    function removeBolt(index) {
+      if (activeBolts[index]) {
+        playerBoltsContainer.removeChild(activeBolts[index].element);
+        activeBolts.splice(index, 1);
+      }
+    }
+
+    // ==========================================
+    // HEALTH & WIN / LOSE CONDITIONS
+    // ==========================================
+    function takePlayerDamage(amount) {
+      sfx.playHurt();
+      STATE.playerHp = Math.max(0, STATE.playerHp - amount);
+      updateUI();
+
+      elDamageFlash.style.opacity = '1';
+      setTimeout(() => { elDamageFlash.style.opacity = '0'; }, 200);
+
+      if (STATE.playerHp <= 0) {
+        gameOver(false);
+      }
+    }
+
+    function damageDragon(amount) {
+      STATE.dragonHp = Math.max(0, STATE.dragonHp - amount);
+      updateUI();
+
+      const body = document.getElementById('dragon-body');
+      body.setAttribute('color', '#ffffff');
+      setTimeout(() => { body.setAttribute('color', '#7f1d1d'); }, 140);
+
+      if (STATE.dragonHp <= 0) {
+        gameOver(true);
+      }
+    }
+
+    function updateUI() {
+      const playerPct = (STATE.playerHp / STATE.maxPlayerHp) * 100;
+      elPlayerHpBar.style.width = `${playerPct}%`;
+      elPlayerHpText.textContent = `${STATE.playerHp} / ${STATE.maxPlayerHp}`;
+
+      const dragonPct = (STATE.dragonHp / STATE.maxDragonHp) * 100;
+      elDragonHpBar.style.width = `${dragonPct}%`;
+      elDragonHpText.textContent = `${STATE.dragonHp} / ${STATE.maxDragonHp}`;
+      
+      // Update 3D Dragon HP Bar
+      elDragon3dHpBar.setAttribute('width', (4.0 * (dragonPct / 100)).toString());
+
+      elScoreText.textContent = STATE.score;
+      elVrHudText.setAttribute('value', `HP: ${STATE.playerHp} | BOSS: ${STATE.dragonHp} | SCORE: ${STATE.score}`);
+    }
+
+    function gameOver(isVictory) {
+      STATE.active = false;
+
+      const endTitle = document.getElementById('end-title');
+      const endSubtitle = document.getElementById('end-subtitle');
+      const endScore = document.getElementById('end-score');
+
+      endScore.textContent = STATE.score;
+
+      if (isVictory) {
+        endTitle.textContent = "VICTORY!";
+        endTitle.className = "fantasy-title text-4xl md:text-5xl font-black text-amber-400 glow-gold mb-2";
+        endSubtitle.textContent = "You deflected the dragon's hellfire and saved the realm!";
+        
+        dragonEl.setAttribute('animation__defeat', {
+          property: 'position',
+          to: '0 -2 -16',
+          dur: 2000,
+          easing: 'easeOutBounce'
+        });
+      } else {
+        endTitle.textContent = "YOU WERE DEFEATED";
+        endTitle.className = "fantasy-title text-4xl md:text-5xl font-black text-red-500 glow-red mb-2";
+        endSubtitle.textContent = "Ignis destroyed your defense. Try again, brave knight!";
+      }
+
+      setTimeout(() => {
+        elEndOverlay.classList.remove('hidden');
+      }, 1000);
+    }
+
+    // ==========================================
+    // IMPACT PARTICLES
+    // ==========================================
+    function createImpactParticles(pos, colorHex) {
+      const particleGroup = document.createElement('a-entity');
+      particleGroup.setAttribute('position', pos);
+
+      for (let i = 0; i < 8; i++) {
+        const p = document.createElement('a-sphere');
+        p.setAttribute('radius', '0.08');
+        p.setAttribute('color', colorHex);
+        p.setAttribute('material', 'emissive: ' + colorHex + '; emissiveIntensity: 2; shader: flat');
+
+        const destX = (Math.random() - 0.5) * 2;
+        const destY = (Math.random() - 0.5) * 2;
+        const destZ = (Math.random() - 0.5) * 2;
+
+        p.setAttribute('animation', {
+          property: 'position',
+          to: `${destX} ${destY} ${destZ}`,
+          dur: 400,
+          easing: 'easeOutQuad'
+        });
+
+        p.setAttribute('animation__fade', {
+          property: 'scale',
+          to: '0 0 0',
+          dur: 400,
+          easing: 'easeOutQuad'
+        });
+
+        particleGroup.appendChild(p);
+      }
+
+      sceneEl.appendChild(particleGroup);
+
+      setTimeout(() => {
+        sceneEl.removeChild(particleGroup);
+      }, 450);
+    }
+  </script>
+</body>
+</html>
