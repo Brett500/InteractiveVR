@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dragon Shield VR - Boss Battle</title>
+  <!-- Load A-Frame VR Framework -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <!-- Load Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800;900&family=Rajdhani:wght@500;700&display=swap');
+    
+    body {
+      font-family: 'Rajdhani', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+      margin: 0;
+      background-color: #020617;
+    }
+    
+    .fantasy-title {
+      font-family: 'Cinzel', serif;
+    }
+    
+    #damage-flash {
+      pointer-events: none;
+      transition: opacity 0.15s ease-out;
+    }
+
+    .glow-gold {
+      text-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
+    }
+
+    #crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body class="bg-black text-white">
+
+  <!-- Reticle / Shield Aim Indicator -->
+  <div id="crosshair">
+    <div class="w-12 h-12 border-2 border-amber-400/80 rounded-full flex items-center justify-center animate-pulse">
+      <div class="w-3 h-3 bg-cyan-400 rounded-full shadow-[0_0_8px_#38bdf8]"></div>
+    </div>
+  </div>
+
+  <!-- HUD & UI Overlay -->
+  <div id="ui-container" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4 md:p-6">
+    
+    <!-- Top HUD Bar -->
+    <div class="flex justify-between items-start w-full max-w-5xl mx-auto gap-4">
+      
+      <!-- Player HP -->
+      <div class="bg-slate-900/85 backdrop-blur-md border border-slate-700/80 p-3 rounded-xl shadow-2xl flex flex-col gap-1">
+        <span class="text-xs font-bold uppercase tracking-wider text-blue-400 flex items-center gap-1">
+          🛡️ PLAYER HEALTH
+        </span>
+        <div id="player-hearts" class="flex items-center space-x-1 text-2xl">
+          <span>❤️</span><span>❤️</span><span>❤️</span>
+        </div>
+      </div>
+
+      <!-- Score & Deflections -->
+      <div class="text-center bg-slate-900/85 backdrop-blur-md border border-amber-500/40 px-6 py-2 rounded-xl shadow-2xl">
+        <div class="text-xs font-semibold uppercase tracking-widest text-amber-400">Score</div>
+        <div id="score-text" class="text-2xl md:text-3xl font-extrabold text-amber-300 fantasy-title glow-gold">0</div>
+        <div class="text-[10px] text-slate-400 font-bold uppercase mt-0.5">Deflected: <span id="deflect-count" class="text-cyan-400">0</span></div>
+      </div>
+
+      <!-- Dragon Stats -->
+      <div class="bg-slate-900/85 backdrop-blur-md border border-red-900/80 p-3 rounded-xl shadow-2xl min-w-[140px]">
+        <div class="text-xs font-bold uppercase tracking-wider text-red-500 flex items-center gap-1">
+          🐉 IGNIS THE DRAGON
+        </div>
+        <div id="dragon-hp-text" class="text-sm font-bold text-white mt-1">100 / 100 HP</div>
+      </div>
+    </div>
+
+    <!-- On-screen Controls Guidance -->
+    <div class="text-center text-xs md:text-sm text-slate-200 bg-slate-900/80 backdrop-blur-sm self-center px-4 py-2 rounded-full border border-slate-700/60 shadow-lg">
+      <span class="text-amber-400 font-bold">Objective:</span> Align your shield crosshair with incoming Fireballs to DEFLECT them back! Click to shoot magic bolts!
+    </div>
+  </div>
+
+  <!-- Red Flash Effect on Damage -->
+  <div id="damage-flash" class="absolute inset-0 bg-red-600/40 z-20 opacity-0 pointer-events-none"></div>
+
+  <!-- Start Screen Overlay -->
+  <div id="start-overlay" class="absolute inset-0 z-30 bg-slate-950/90 backdrop-blur-lg flex flex-col items-center justify-center p-6 text-center pointer-events-auto">
+    <div class="max-w-xl w-full border border-amber-500/40 bg-slate-900/95 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+      <div class="w-16 h-16 mb-4 rounded-full bg-amber-500/10 border border-amber-500/50 flex items-center justify-center text-amber-400 text-3xl">
+        🛡️
+      </div>
+      <h1 class="fantasy-title text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 mb-2 glow-gold">
+        DRAGON SHIELD VR
+      </h1>
+      <p class="text-slate-300 text-sm md:text-base mb-6 max-w-md">
+        Ignis the Fire Dragon is unleashing hellfire! Look at incoming fireballs to block/deflect them with your shield, and click/tap to shoot magic bolts at the dragon!
+      </p>
+
+      <button id="start-btn" class="w-full py-4 px-8 bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white font-extrabold text-xl rounded-xl shadow-xl hover:scale-105 transition-all transform cursor-pointer fantasy-title">
+        START BATTLE
+      </button>
+    </div>
+  </div>
+
+  <!-- End Screen Overlay -->
+  <div id="end-overlay" class="absolute inset-0 z-30 bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center hidden pointer-events-auto">
+    <div class="max-w-md w-full border border-slate-800 bg-slate-900/90 p-8 rounded-2xl shadow-2xl flex flex-col items-center">
+      <h2 id="end-title" class="fantasy-title text-4xl font-black mb-2">VICTORY!</h2>
+      <p id="end-subtitle" class="text-slate-300 mb-6">You slayed Ignis and defended the realm!</p>
+      
+      <div class="bg-slate-950/80 p-4 rounded-xl w-full mb-6 border border-slate-800 flex justify-around">
+        <div>
+          <div class="text-xs text-slate-400 uppercase">Final Score</div>
+          <div id="end-score" class="text-3xl font-bold text-amber-400 fantasy-title">0</div>
+        </div>
+        <div>
+          <div class="text-xs text-slate-400 uppercase">Fireballs Deflected</div>
+          <div id="end-deflected" class="text-3xl font-bold text-cyan-400 fantasy-title">0</div>
+        </div>
+      </div>
+
+      <button id="restart-btn" class="w-full py-3 px-6 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 text-white font-bold text-lg rounded-xl shadow-lg transition-all cursor-pointer fantasy-title">
+        PLAY AGAIN
+      </button>
+    </div>
+  </div>
+
+  <!-- A-FRAME 3D VR SCENE -->
+  <a-scene embedded class="w-full h-full">
+
+    <!-- Sky & Environment Lighting -->
+    <a-sky color="#090d16"></a-sky>
+    <a-ambient-light color="#ffffff" intensity="0.9"></a-ambient-light>
+    <a-light type="directional" color="#ffedd5" intensity="1.5" position="5 10 5"></a-light>
+    <a-light type="point" color="#ff4500" intensity="2" position="0 4 -10"></a-light>
+    
+    <!-- Arena Ground Platform -->
+    <a-plane position="0 0 -10" rotation="-90 0 0" width="60" height="60" color="#0f172a"></a-plane>
+    <a-ring position="0 0.01 -10" rotation="-90 0 0" radius-inner="2" radius-outer="22" color="#1e293b"></a-ring>
+
+    <!-- CENTER 3D DRAGON BOSS -->
+    <a-entity id="dragon-root" position="0 2.5 -12">
+      
+      <!-- Boss 3D Floating Nameplate / HP Gauge -->
+      <a-entity id="boss-hp-3d-group" position="0 4.2 0">
+        <a-plane width="5.2" height="0.5" color="#020617" material="shader: flat"></a-plane>
+        <a-plane id="boss-hp-3d-fill" width="5.0" height="0.4" position="0 0 0.02" color="#dc2626" material="shader: flat"></a-plane>
+        <a-text value="IGNIS THE FIRE DRAGON" align="center" position="0 0.55 0.02" width="6" color="#fef08a"></a-text>
+      </a-entity>
+
+      <!-- Dragon Body Mesh Primitives -->
+      <!-- Torso / Chest -->
+      <a-cone id="dragon-torso" position="0 0 0" radius-top="0.8" radius-bottom="1.8" height="3.2" rotation="25 0 0" color="#991b1b">
+        <!-- Glowing Chest Core -->
+        <a-sphere position="0 0.2 -0.7" radius="0.75" color="#f97316" material="shader: flat"></a-sphere>
+      </a-cone>
+
+      <!-- Wings Left & Right -->
+      <a-entity id="wing-left" position="-1.4 0.5 0">
+        <a-box position="-1.8 0 0" width="3.2" height="0.1" depth="1.4" color="#7f1d1d" rotation="0 -15 -10"></a-box>
+      </a-entity>
+
+      <a-entity id="wing-right" position="1.4 0.5 0">
+        <a-box position="1.8 0 0" width="3.2" height="0.1" depth="1.4" color="#7f1d1d" rotation="0 15 10"></a-box>
+      </a-entity>
+
+      <!-- Dragon Head & Mouth Fire Launcher Point -->
+      <a-entity id="dragon-head-group" position="0 1.4 -0.8">
+        <a-cylinder position="0 0.6 -0.3" radius="0.5" height="1.2" rotation="20 0 0" color="#991b1b"></a-cylinder>
+        
+        <a-entity id="dragon-head" position="0 1.2 -0.6">
+          <a-box position="0 0 -0.6" width="1.0" height="0.7" depth="1.3" color="#7f1d1d"></a-box>
+          
+          <!-- Eyes -->
+          <a-sphere position="-0.45 0.2 -0.6" radius="0.18" color="#facc15" material="shader: flat"></a-sphere>
+          <a-sphere position="0.45 0.2 -0.6" radius="0.18" color="#facc15" material="shader: flat"></a-sphere>
+          
+          <!-- Horns -->
+          <a-cone position="-0.4 0.6 0" radius-bottom="0.14" height="1.0" rotation="-20 -15 0" color="#0f172a"></a-cone>
+          <a-cone position="0.4 0.6 0" radius-bottom="0.14" height="1.0" rotation="-20 15 0" color="#0f172a"></a-cone>
+
+          <!-- Mouth Breathing Fire Charging Glow -->
+          <a-sphere id="mouth-glow" position="0 -0.1 -1.3" radius="0.5" color="#ff3300" material="shader: flat; opacity: 0.2"></a-sphere>
+        </a-entity>
+      </a-entity>
+
+    </a-entity>
+
+    <!-- PROJECTILE CONTAINERS -->
+    <a-entity id="fireballs-container"></a-entity>
+    <a-entity id="bolts-container"></a-entity>
+
+    <!-- PLAYER CAMERA & SHIELD RIG -->
+    <a-entity id="player-rig" position="0 0 0">
+      <a-entity id="camera" camera look-controls position="0 1.6 0">
+        
+        <!-- Player Shield Held Front Center in View -->
+        <a-entity id="desktop-shield-holder" position="0 -0.25 -0.8">
+          <!-- Outer Shield Base -->
+          <a-box id="desktop-shield-mesh" width="0.85" height="1.25" depth="0.1" color="#1e293b">
+            <!-- Glowing Blue Shield Rim -->
+            <a-box width="0.89" height="1.29" depth="0.02" position="0 0 0" color="#0284c7" material="shader: flat"></a-box>
+            <!-- Gold Crest Emblem -->
+            <a-octahedron radius="0.25" position="0 0 0.07" color="#f59e0b" material="shader: flat"></a-octahedron>
+          </a-box>
+        </a-entity>
+
+      </a-entity>
+    </a-entity>
+
+  </a-scene>
+
+  <!-- GAME LOGIC & ANIMATION LOOP -->
+  <script>
+    // Audio Synthesizer via Web Audio API for custom sound effects
+    class SoundFX {
+      constructor() { this.ctx = null; }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+      }
+
+      playFireball() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(320, now);
+        osc.frequency.exponentialRampToValueAtTime(70, now + 0.6);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+
+      playShieldBlock() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(900, now);
+        osc.frequency.exponentialRampToValueAtTime(250, now + 0.35);
+        gain.gain.setValueAtTime(0.6, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      }
+
+      playHurt() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.linearRampToValueAtTime(40, now + 0.3);
+        gain.gain.setValueAtTime(0.7, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      }
+
+      playBolt() {
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(500, now);
+        osc.frequency.exponentialRampToValueAtTime(1400, now + 0.15);
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.15);
+      }
+    }
+
+    const sfx = new SoundFX();
+
+    // Main Game Manager Logic
+    class GameManager {
+      constructor() {
+        this.active = false;
+        this.playerHp = 3;
+        this.maxPlayerHp = 3;
+        this.dragonHp = 100;
+        this.maxDragonHp = 100;
+        this.score = 0;
+        this.deflectedCount = 0;
+        this.lastSpawnTime = 0;
+        this.spawnInterval = 2800; // Fireball every ~2.8s
+        this.animTime = 0;
+
+        this.fireballs = []; // Dynamic array of active fireball objects
+        this.bolts = [];     // Dynamic array of active magic bolt objects
+
+        // UI references
+        this.elStartOverlay = document.getElementById('start-overlay');
+        this.elEndOverlay = document.getElementById('end-overlay');
+        this.elHearts = document.getElementById('player-hearts');
+        this.elDragonHpText = document.getElementById('dragon-hp-text');
+        this.elScoreText = document.getElementById('score-text');
+        this.elDeflectCount = document.getElementById('deflect-count');
+        this.elDamageFlash = document.getElementById('damage-flash');
+
+        // 3D scene elements
+        this.dragonRoot = document.getElementById('dragon-root');
+        this.wingLeft = document.getElementById('wing-left');
+        this.wingRight = document.getElementById('wing-right');
+        this.mouthGlow = document.getElementById('mouth-glow');
+        this.fireballsContainer = document.getElementById('fireballs-container');
+        this.boltsContainer = document.getElementById('bolts-container');
+        this.cameraEl = document.getElementById('camera');
+        this.shieldMesh = document.getElementById('desktop-shield-mesh');
+        this.bossHp3dFill = document.getElementById('boss-hp-3d-fill');
+
+        this.initEventListeners();
+        this.startLoop();
+      }
+
+      initEventListeners() {
+        document.getElementById('start-btn').addEventListener('click', () => this.startGame());
+        document.getElementById('restart-btn').addEventListener('click', () => this.restartGame());
+
+        // Shooting Magic Bolts on Click/Tap
+        window.addEventListener('click', (e) => {
+          if (!this.active || e.target.closest('#start-overlay') || e.target.closest('#end-overlay')) return;
+          this.spawnPlayerBolt();
+        });
+      }
+
+      startGame() {
+        sfx.init();
+        this.active = true;
+        this.playerHp = this.maxPlayerHp;
+        this.dragonHp = this.maxDragonHp;
+        this.score = 0;
+        this.deflectedCount = 0;
+        this.lastSpawnTime = performance.now();
+
+        // Clear existing projectiles
+        this.clearProjectiles();
+
+        this.updateUI();
+        this.elStartOverlay.classList.add('hidden');
+        this.elEndOverlay.classList.add('hidden');
+      }
+
+      restartGame() {
+        if (this.dragonRoot) this.dragonRoot.setAttribute('position', '0 2.5 -12');
+        this.startGame();
+      }
+
+      clearProjectiles() {
+        this.fireballs.forEach(f => {
+          if (f.el && f.el.parentNode) f.el.parentNode.removeChild(f.el);
+        });
+        this.bolts.forEach(b => {
+          if (b.el && b.el.parentNode) b.el.parentNode.removeChild(b.el);
+        });
+        this.fireballs = [];
+        this.bolts = [];
+      }
+
+      spawnFireball() {
+        sfx.playFireball();
+
+        const fireballEl = document.createElement('a-entity');
+        
+        // Main Fireball Outer Body (Bright Red/Orange Emissive Material)
+        const outerSphere = document.createElement('a-sphere');
+        outerSphere.setAttribute('radius', '0.85');
+        outerSphere.setAttribute('color', '#ff3300');
+        outerSphere.setAttribute('material', 'emissive: #ff2200; emissiveIntensity: 0.8; roughness: 0.3');
+
+        // Glowing Core Center (Yellow High-Contrast)
+        const innerCore = document.createElement('a-sphere');
+        innerCore.setAttribute('radius', '0.5');
+        innerCore.setAttribute('color', '#ffff00');
+        innerCore.setAttribute('material', 'emissive: #ffff00; emissiveIntensity: 1.0');
+        outerSphere.appendChild(innerCore);
+
+        // Pulsing Ring Effect
+        const ring = document.createElement('a-ring');
+        ring.setAttribute('radius-inner', '0.8');
+        ring.setAttribute('radius-outer', '1.1');
+        ring.setAttribute('color', '#ffaa00');
+        ring.setAttribute('material', 'side: double; emissive: #ffaa00; opacity: 0.8');
+        ring.setAttribute('rotation', '0 0 0');
+        outerSphere.appendChild(ring);
+
+        fireballEl.appendChild(outerSphere);
+
+        // Spawn from dragon mouth position with random variation
+        const dragonPos = new THREE.Vector3(0, 2.5, -12);
+        const spawnXOffset = (Math.random() - 0.5) * 3.0;
+        const spawnYOffset = (Math.random() - 0.5) * 1.8;
+        const startPos = new THREE.Vector3(
+          dragonPos.x + spawnXOffset, 
+          dragonPos.y + 0.5 + spawnYOffset, 
+          dragonPos.z + 1.2
+        );
+        fireballEl.setAttribute('position', startPos);
+
+        this.fireballsContainer.appendChild(fireballEl);
+
+        // Target different areas around player to force active shielding
+        const targetXOffset = (Math.random() - 0.5) * 4.5;
+        const targetYOffset = (Math.random() - 0.5) * 3.0;
+        const targetPos = new THREE.Vector3(
+          targetXOffset, 
+          1.6 + targetYOffset, 
+          0
+        );
+        const dir = new THREE.Vector3().subVectors(targetPos, startPos).normalize();
+
+        this.fireballs.push({
+          el: fireballEl,
+          pos: startPos.clone(),
+          dir: dir,
+          speed: 6.0 + Math.min(this.deflectedCount * 0.4, 6),
+          isReflected: false
+        });
+      }
+
+      spawnPlayerBolt() {
+        sfx.playBolt();
+
+        const boltEl = document.createElement('a-sphere');
+        boltEl.setAttribute('radius', '0.22');
+        boltEl.setAttribute('color', '#38bdf8');
+        boltEl.setAttribute('material', 'shader: flat');
+
+        const startPos = new THREE.Vector3(0, 1.6, -0.8);
+        if (this.cameraEl && this.cameraEl.object3D) {
+          this.cameraEl.object3D.getWorldPosition(startPos);
+        }
+
+        boltEl.setAttribute('position', startPos);
+        this.boltsContainer.appendChild(boltEl);
+
+        // Direction forward from camera view angle
+        const dir = new THREE.Vector3(0, 0, -1);
+        if (this.cameraEl && this.cameraEl.object3D) {
+          this.cameraEl.object3D.getWorldDirection(dir);
+          dir.negate(); // Invert because camera points down -Z
+        }
+
+        this.bolts.push({
+          el: boltEl,
+          pos: startPos.clone(),
+          dir: dir,
+          speed: 32.0
+        });
+      }
+
+      startLoop() {
+        let lastTime = performance.now();
+
+        const loop = (now) => {
+          const deltaSec = Math.min((now - lastTime) / 1000, 0.1);
+          lastTime = now;
+
+          this.animTime += deltaSec;
+
+          // 1. Dragon Gentle Floating & Wing Flap Animation
+          if (this.dragonRoot) {
+            const hoverY = 2.5 + Math.sin(this.animTime * 2.0) * 0.4;
+            this.dragonRoot.setAttribute('position', `0 ${hoverY} -12`);
+
+            const wingAngle = Math.sin(this.animTime * 4.0) * 22;
+            if (this.wingLeft) this.wingLeft.setAttribute('rotation', `0 0 ${12 + wingAngle}`);
+            if (this.wingRight) this.wingRight.setAttribute('rotation', `0 0 ${-12 - wingAngle}`);
+          }
+
+          if (this.active) {
+            // 2. Dragon Fireball Spawning Timer Logic
+            if (now - this.lastSpawnTime > this.spawnInterval) {
+              this.lastSpawnTime = now;
+              this.spawnFireball();
+            }
+
+            // Flash mouth glow when about to fire
+            if (now - this.lastSpawnTime > this.spawnInterval - 600) {
+              if (this.mouthGlow) this.mouthGlow.setAttribute('material', 'opacity: 0.9');
+            } else {
+              if (this.mouthGlow) this.mouthGlow.setAttribute('material', 'opacity: 0.1');
+            }
+
+            // 3. Update Fireballs Movement & Collision Checks
+            this.updateFireballs(deltaSec);
+
+            // 4. Update Magic Bolts Movement & Collision Checks
+            this.updateBolts(deltaSec);
+          }
+
+          requestAnimationFrame(loop);
+        };
+
+        requestAnimationFrame(loop);
+      }
+
+      updateFireballs(deltaSec) {
+        // Player Shield and Camera Positions in 3D Space
+        const shieldPos = new THREE.Vector3(0, 1.35, -0.8);
+        if (this.shieldMesh && this.shieldMesh.object3D) {
+          this.shieldMesh.object3D.getWorldPosition(shieldPos);
+        }
+
+        const cameraPos = new THREE.Vector3(0, 1.6, 0);
+        if (this.cameraEl && this.cameraEl.object3D) {
+          this.cameraEl.object3D.getWorldPosition(cameraPos);
+        }
+
+        const dragonPos = new THREE.Vector3(0, 2.5, -12);
+
+        for (let i = this.fireballs.length - 1; i >= 0; i--) {
+          const f = this.fireballs[i];
+          
+          // Advance Position
+          f.pos.addScaledVector(f.dir, f.speed * deltaSec);
+          f.el.setAttribute('position', f.pos);
+
+          // Rotate fireball ring for dynamic visual effect
+          const outerSphere = f.el.querySelector('a-sphere');
+          if (outerSphere) {
+            outerSphere.object3D.rotation.y += deltaSec * 4;
+            outerSphere.object3D.rotation.z += deltaSec * 3;
+          }
+
+          // A) CHECK SHIELD DEFLECTION
+          if (!f.isReflected && f.pos.distanceTo(shieldPos) < 1.3) {
+            f.isReflected = true;
+            sfx.playShieldBlock();
+
+            // Reverse direction towards dragon!
+            f.dir.subVectors(dragonPos, f.pos).normalize();
+            f.speed = 20.0;
+
+            // Turn Fireball Cyan/Blue on Deflection
+            const sphere = f.el.querySelector('a-sphere');
+            if (sphere) {
+              sphere.setAttribute('color', '#38bdf8');
+              sphere.setAttribute('material', 'emissive: #0284c7; emissiveIntensity: 1.0');
+            }
+
+            this.score += 150;
+            this.deflectedCount++;
+            this.updateUI();
+            continue;
+          }
+
+          // B) CHECK PLAYER HIT
+          if (!f.isReflected && f.pos.distanceTo(cameraPos) < 1.2) {
+            this.takePlayerDamage();
+            this.removeFireball(i);
+            continue;
+          }
+
+          // C) CHECK DEFLECTED FIREBALL HITTING DRAGON
+          if (f.isReflected && f.pos.distanceTo(dragonPos) < 2.5) {
+            this.damageDragon(25);
+            this.score += 250;
+            this.updateUI();
+            this.removeFireball(i);
+            continue;
+          }
+
+          // Out of Bounds Cleanup
+          if (Math.abs(f.pos.z) > 40 || Math.abs(f.pos.x) > 30) {
+            this.removeFireball(i);
+          }
+        }
+      }
+
+      removeFireball(index) {
+        const f = this.fireballs[index];
+        if (f && f.el && f.el.parentNode) {
+          f.el.parentNode.removeChild(f.el);
+        }
+        this.fireballs.splice(index, 1);
+      }
+
+      updateBolts(deltaSec) {
+        const dragonPos = new THREE.Vector3(0, 2.5, -12);
+
+        for (let i = this.bolts.length - 1; i >= 0; i--) {
+          const b = this.bolts[i];
+
+          // Advance Bolt
+          b.pos.addScaledVector(b.dir, b.speed * deltaSec);
+          b.el.setAttribute('position', b.pos);
+
+          // Check Hit on Dragon
+          if (b.pos.distanceTo(dragonPos) < 2.6) {
+            this.damageDragon(5); // Direct bolt attack damage
+            this.score += 30;
+            this.updateUI();
+            this.removeBolt(i);
+            continue;
+          }
+
+          // Out of Bounds Cleanup
+          if (b.pos.z < -35 || Math.abs(b.pos.x) > 30) {
+            this.removeBolt(i);
+          }
+        }
+      }
+
+      removeBolt(index) {
+        const b = this.bolts[index];
+        if (b && b.el && b.el.parentNode) {
+          b.el.parentNode.removeChild(b.el);
+        }
+        this.bolts.splice(index, 1);
+      }
+
+      takePlayerDamage() {
+        sfx.playHurt();
+        this.playerHp = Math.max(0, this.playerHp - 1);
+        this.updateUI();
+
+        this.elDamageFlash.style.opacity = '1';
+        setTimeout(() => { this.elDamageFlash.style.opacity = '0'; }, 200);
+
+        if (this.playerHp <= 0) {
+          this.gameOver(false);
+        }
+      }
+
+      damageDragon(amount) {
+        this.dragonHp = Math.max(0, this.dragonHp - amount);
+        this.updateUI();
+
+        // Flash Dragon Torso White when damaged
+        const torso = document.getElementById('dragon-torso');
+        if (torso) {
+          torso.setAttribute('color', '#ffffff');
+          setTimeout(() => torso.setAttribute('color', '#991b1b'), 120);
+        }
+
+        if (this.dragonHp <= 0) {
+          this.gameOver(true);
+        }
+      }
+
+      updateUI() {
+        let heartsHTML = '';
+        for (let i = 0; i < this.maxPlayerHp; i++) {
+          heartsHTML += i < this.playerHp ? '❤️' : '🖤';
+        }
+        this.elHearts.innerHTML = heartsHTML;
+
+        this.elDragonHpText.textContent = `${this.dragonHp} / ${this.maxDragonHp} HP`;
+        const hpRatio = this.dragonHp / this.maxDragonHp;
+        if (this.bossHp3dFill) {
+          this.bossHp3dFill.setAttribute('width', (5.0 * hpRatio).toString());
+        }
+
+        this.elScoreText.textContent = this.score;
+        this.elDeflectCount.textContent = this.deflectedCount;
+      }
+
+      gameOver(isVictory) {
+        this.active = false;
+        this.clearProjectiles();
+
+        document.getElementById('end-score').textContent = this.score;
+        document.getElementById('end-deflected').textContent = this.deflectedCount;
+
+        const endTitle = document.getElementById('end-title');
+        const endSubtitle = document.getElementById('end-subtitle');
+
+        if (isVictory) {
+          endTitle.textContent = "VICTORY SLAYER!";
+          endTitle.className = "fantasy-title text-4xl font-black text-amber-400 glow-gold mb-2";
+          endSubtitle.textContent = "You blocked the fireballs and slain Ignis the Dragon!";
+        } else {
+          endTitle.textContent = "DEFEATED IN FLAMES";
+          endTitle.className = "fantasy-title text-4xl font-black text-red-500 mb-2";
+          endSubtitle.textContent = "Your shield crumbled under the dragon's hellfire.";
+        }
+
+        setTimeout(() => {
+          this.elEndOverlay.classList.remove('hidden');
+        }, 500);
+      }
+    }
+
+    // Initialize Game Manager when DOM is ready
+    window.addEventListener('DOMContentLoaded', () => {
+      window.gameManager = new GameManager();
+    });
+  </script>
+</body>
+</html>
